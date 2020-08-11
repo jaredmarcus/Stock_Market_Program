@@ -38,17 +38,17 @@ def Call():
 			return Call()	
 
 def Put():
-	Opt2 = input("Pick a number for a type of Call Option: \n1: BEAR Put Spread (Put CREDIT Spread) \t2: BULL Put Spread (Call CREDIT Spread)\n")
+	Opt2 = input("Pick a number for a type of Call Option: \n1: BEAR Put Spread (Put DEBIT Spread) \t2: BULL Put Spread (Call CREDIT Spread)\n")
 	option = '2' #Option 2 is for Puts
 	if Opt2 == '1': #Bear Call Spread
 		String = 'B'
 		Type = 'D'
-		Bear(Opt2)
+		Bear(option, String, Type)
 		
 	elif Opt2 == '2': #Bull Call Spread
 		String = 'U'
 		Type = 'C'
-		BullPut(Opt2)
+		BullPut(option, String, Type)
 		
 	elif Opt2 != '1' and Opt2 != '2':
 		print ("INVALID SELECTION! Please enter a valid choice\n")
