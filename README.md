@@ -1,4 +1,4 @@
-#Stock_Option_Payoff_Calculator
+STOCK OPTION PAYOFF CALCULATOR
 Python Program to give basic information and diagrams for Option trading
 
 The Program takes in inputs of strike prices, contract prices, quantity of contracts, as well as expiration date.
@@ -11,4 +11,3 @@ More stock info (e.g. trading volume, 52W High and Low, etc),
 Other option strategies (e.g. iron condor, straddle or strangle),
 News,
 Weekly watchlist,
-
