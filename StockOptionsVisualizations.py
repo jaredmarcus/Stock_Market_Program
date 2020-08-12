@@ -1,8 +1,5 @@
 #!/usr/bin/python
-import builtins
-import sys
-import requests
-import array
+import builtins, sys, requests, array, re
 from bs4 import BeautifulSoup
 from datetime import date, timedelta
 symbols = []
@@ -60,8 +57,12 @@ def Bear(option, String, Type):
 		#print (StockAbv)
 		symbols.append(StockAbv)
 		#print (symbols)
-		CurrentStock = Calc()
+		run = '1'
+		CurrentStock = Calc(run)
 		StockAbv = StockAbv.upper()
+		run = '2'
+		coName = Calc(run)
+		print("\nCompany: ",coName)
 		print ("Current Price of", StockAbv, "is: $", CurrentStock)
 		HighStrike = input("Enter High Strike Price\n")
 		LowStrike = input("Enter Low Strike Price\n")
@@ -84,8 +85,12 @@ def Bull(option, String, Type):
 		#print (StockAbv)
 		symbols.append(StockAbv)
 		#print (symbols)
-		CurrentStock = Calc()
+		run = '1'
+		CurrentStock = Calc(run)
 		StockAbv = StockAbv.upper()
+		run = '2'
+		coName = Calc(run)
+		print("\nCompany: ",coName)
 		print ("Current Price of", StockAbv, "is: $", CurrentStock)
 		CurrentStock = input("Enter Current Stock Price")
 		HighStrike = input("Enter High Strike Price\n")
@@ -168,7 +173,10 @@ def Calculation(HighStrike, LowStrike, ContractPrice, Contract, option, CurrentS
 		B_E_Price = float(B_E_Price)
 		Gain = float(Gain)
 		Collateral =(int(Width)*100)
-		print("\nStock:", StockAbv, "currently at: $", CurrentStock)
+		run = '2'
+		coName = Calc(run)
+		print("\nCompany: ",coName)
+		print("Stock Abv:", StockAbv, "currently at: $", CurrentStock)
 		
 		if Type.upper() == 'C':
 			print("Collateral Due is: $", Collateral)
@@ -178,16 +186,24 @@ def Calculation(HighStrike, LowStrike, ContractPrice, Contract, option, CurrentS
 		print ("Max Gain: $", Gain)
 		print ("Option expires in :", Delta.days, "days")
 		
-def Calc():
+def Calc(run):
 	for s in symbols:
 		vals = {}
 		url = ("https://finance.yahoo.com/quote/{}?p={}".format(s,s))
 		response = requests.get(url)
 		soup = BeautifulSoup(response.text, 'lxml')
 		#print(soup)
-		price = soup.find_all('div', {'class':'D(ib) Mend(20px)'})[0].find('span').text
-		#print(price)
-		return price			
+		if run == '1':
+			price = soup.find_all('div', {'class':'D(ib) Mend(20px)'})[0].find('span').text
+			#print(price)
+			return price
+		elif run == '2':
+			title = soup.find("title")
+			tmp = title.get_text()
+			rxTitle = re.compile(r'\(.*$')
+			coName = rxTitle.sub("", tmp)
+			return coName
+						
 
 
 art = open('AsciiArt.txt', 'r')
