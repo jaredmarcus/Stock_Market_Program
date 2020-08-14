@@ -1,10 +1,40 @@
 #!/usr/bin/python
-import builtins, sys, requests, array, re
+import builtins, sys, requests, array, re, time, json, csv
+import pandas as pd
+from alpha_vantage.timeseries import TimeSeries
 from bs4 import BeautifulSoup
 from datetime import date, timedelta
 symbols = []
 
+
+def Main():
+	selection = input("Selection: ")
+	if selection == '1':
+		print("\n")
+		Prompt1()
+	elif selection == '2':
+		print("\n")
+		News()
+	elif selection == '3':
+		print("\n")
+		WatchlistCreation()
+	elif selection == '4':
+		print("\n")
+		StockInfo()
+	elif selection == '5':
+		print("\n")
+		LiveStockInfo()
+	elif selection == '6':
+		print("\n")
+		Settings()
+	else:
+		print ("INVALID SELECTION! Please enter a valid choice\n")
+		return Main()
+
 def Prompt1():
+	OptionPayout = open('OptionPayout.txt', 'r')
+	print (OptionPayout.read())
+	OptionPayout.close()
 	number = input("Pick a number for an Option Stategy for Analysis: \n1: Call \t2: Put\n")
 
 	if number == '1': #Calls
@@ -203,11 +233,97 @@ def Calc(run):
 			rxTitle = re.compile(r'\(.*$')
 			coName = rxTitle.sub("", tmp)
 			return coName
-						
+			
+
+def News(): #Program option 2
+	News = open('News.txt', 'r')
+	print (News.read())
+	News.close()
+	
+def WatchlistCreation(): #Program option 3
+	WatchlistCreation = open('WatchlistCreation.txt', 'r')
+	print (WatchlistCreation.read())
+	WatchlistCreation.close()
+
+def StockInfo(): #Program option 4
+	StockInfo = open('StockInfo.txt', 'r')
+	print (StockInfo.read())
+	StockInfo.close()
+	
+	api_key = 'N2KM217DEK4NJRPI'
+	ts = TimeSeries(key=api_key, output_format='pandas')
+	ans = input("Do you know the Stock Abbreviation? \n1.)Yes \t 2.)No\nSelection: ")
+	if(ans == '1'):
+		StockAbv = input("Enter Stock Abbreviation\n")
+		StockAbv = StockAbv.lower()
+		#print (StockAbv)
+		symbols.append(StockAbv)
+	elif (ans == '2'):
+		Find()
+		exit()
+	run = '1'
+	CurrentStock = Calc(run)
+	StockAbv = StockAbv.upper()
+	run = '2'
+	CoName = Calc(run)
+	print("\nCompany: ",CoName, "or", StockAbv)
+	
+	answer = input("Enter a number for a type of Stock Time Series: \n1.)Intraday \t\t 2.)Daily \n3.)Daily Adjusted \t 4.)Weekly \n5.)Weekly Adjusted \t 6.)Monthly \n7.)Monthly Adjusted \t 8.)Quote Endpoint\nSelection: ")
+	if(answer == '1'): #intraday
+		data, meta_data = ts.get_intraday(symbol=symbols, interval = '60min', outputsize = 'compact')
+		print(data)
+	elif (answer == '2'): #daily
+		data, meta_data = ts.get_daily(symbol=symbols, outputsize = 'compact')
+		print(data)
+	elif (answer == '3'): #daily adj
+		data, meta_data = ts.get_daily_adjusted(symbol=symbols, outputsize = 'compact')
+		print(data)
+	elif (answer == '4'): #weekly
+		data, meta_data = ts.get_weekly(symbol=symbols)
+		print(data)
+	elif (answer == '5'): #weekly adj
+		data, meta_data = ts.get_weekly_adjusted(symbol=symbols)
+		print(data)
+	elif (answer == '6'): #monthly
+		data, meta_data = ts.get_monthly(symbol=symbols)
+		print(data)
+	elif (answer == '7'): #monthly adj
+		data, meta_data = ts.get_monthly_adjusted(symbol=symbols)
+		print(data)
+	elif (answer == '8'): #quote endpoint
+		data, meta_data = ts.get_quote_endpoint(symbol=symbols)
+		print(data)
+		
+		
+def Find():	
+	api_key = 'N2KM217DEK4NJRPI'
+	ts = TimeSeries(key=api_key, output_format='csv')
+	key = input("Enter keywords to find desired stock\nSelection: ")
+	print("List of stocks that may match your keywords will be outputted to a .csv file in the directory you have this file at.")
+	StockFinder_csvreader, meta = ts.get_symbol_search(keywords = key)
+	with open('Stock_Finder.csv', 'w') as write_csvfile:
+		writer = csv.writer(write_csvfile, dialect='excel')
+		for row in StockFinder_csvreader:
+			writer.writerow(row)
+	
+		
+def LiveStockInfo(): #Program option 5
+	LiveStockInfo = open('LiveStockInfo.txt', 'r')
+	print (LiveStockInfo.read())
+	LiveStockInfo.close()
+	
+def Settings(): #Program option 6
+	Settings = open('Settings.txt', 'r')
+	print (Settings.read())
+	Settings.close()	
 
 
 art = open('AsciiArt.txt', 'r')
 print (art.read())
 art.close()
 
-Prompt1()
+menu = open('Menu.txt', 'r')
+print (menu.read())
+menu.close()
+
+Main()
