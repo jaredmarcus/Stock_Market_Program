@@ -1,11 +1,20 @@
 #!/usr/bin/python
-import builtins, sys, requests, array, re, time, json, csv
+import builtins, sys, requests, array, re, time, json, csv, os
+import smtpd, smtplib, mimetypes
 import pandas as pd
+from email.mime.multipart import MIMEMultipart
+from email import encoders
+from email.message import Message
+from email.mime.base import MIMEBase
 from alpha_vantage.timeseries import TimeSeries
 from bs4 import BeautifulSoup
 from datetime import date, timedelta
-symbols = []
+from stocknews import StockNews
 
+symbols = []
+api_key = 'N2KM217DEK4NJRPI'
+#Need an api key for WorldTradingData.com and AlphaVatange 
+#WorldTradingData.com only allows 1000 Monthly requests
 
 def Main():
 	selection = input("Selection: ")
@@ -20,7 +29,7 @@ def Main():
 		WatchlistCreation()
 	elif selection == '4':
 		print("\n")
-		StockInfo()
+		StockInformation()
 	elif selection == '5':
 		print("\n")
 		LiveStockInfo()
@@ -217,40 +226,84 @@ def Calculation(HighStrike, LowStrike, ContractPrice, Contract, option, CurrentS
 		print ("Option expires in :", Delta.days, "days")
 		
 def Calc(run):
-	for s in symbols:
-		vals = {}
-		url = ("https://finance.yahoo.com/quote/{}?p={}".format(s,s))
-		response = requests.get(url)
-		soup = BeautifulSoup(response.text, 'lxml')
-		#print(soup)
-		if run == '1':
-			price = soup.find_all('div', {'class':'D(ib) Mend(20px)'})[0].find('span').text
-			#print(price)
-			return price
-		elif run == '2':
+	if (run == '1' or run == '2'):
+		for s in symbols:
+			vals = {}
+			url = ("https://finance.yahoo.com/quote/{}?p={}".format(s,s))
+			response = requests.get(url)
+			soup = BeautifulSoup(response.text, 'lxml')
+			#print(soup)
+			if run == '1':
+				price = soup.find_all('div', {'class':'D(ib) Mend(20px)'})[0].find('span').text
+				#print(price)
+				return price
+			elif run == '2':
+				title = soup.find("title")
+				tmp = title.get_text()
+				rxTitle = re.compile(r'\(.*$')
+				coName = rxTitle.sub("", tmp)
+				return coName
+	elif(run == '3'):
+		number = 1
+		for s in symbols:
+			vals = {}
+			url = ("https://finance.yahoo.com/quote/{}?p={}".format(s,s))
+			response = requests.get(url)
+			soup = BeautifulSoup(response.text, 'lxml')
+			#print(soup)
 			title = soup.find("title")
 			tmp = title.get_text()
 			rxTitle = re.compile(r'\(.*$')
 			coName = rxTitle.sub("", tmp)
-			return coName
-			
+			print("\nCompany: ",coName)
 
 def News(): #Program option 2
 	News = open('News.txt', 'r')
 	print (News.read())
 	News.close()
 	
+	'''
+	number = input("How many Stocks do you want to check the news about? \nSelection: ")
+	if number.isdigit():
+		print(number, "stocks selected")
+	else:
+		print("Input is invalid, Please enter a valid DIGIT number")
+		return News()
+	'''
+	while True:
+		number = input("How many Stocks do you want to check the news about? \nSelection: ")
+		try:
+			val = int(number)
+			print(val, "stocks selected")
+			break;
+		except ValueError:
+				print("Input is invalid, Please enter a valid DIGIT number\n")
+		
+		
+	for i in range(int(number)):
+		StockAbv = input("Enter Stock Abbreviation\n")
+		StockAbv = StockAbv.lower()
+		#print (StockAbv)
+		symbols.append(StockAbv)
+		print (symbols)
+	
+	num = len(symbols)
+	run = '3'
+	Calc(run)
+	sn = StockNews(symbols,wt_key='b951f69e4eaade0a75cb4b96ee008016')
+	df = sn.summarize()	
+	
+	
 def WatchlistCreation(): #Program option 3
 	WatchlistCreation = open('WatchlistCreation.txt', 'r')
 	print (WatchlistCreation.read())
 	WatchlistCreation.close()
 
-def StockInfo(): #Program option 4
+def StockInformation(): #Program option 4
 	StockInfo = open('StockInfo.txt', 'r')
 	print (StockInfo.read())
 	StockInfo.close()
-	
-	api_key = 'N2KM217DEK4NJRPI'
+
 	ts = TimeSeries(key=api_key, output_format='pandas')
 	ans = input("Do you know the Stock Abbreviation? \n1.)Yes \t 2.)No\nSelection: ")
 	if(ans == '1'):
@@ -261,6 +314,9 @@ def StockInfo(): #Program option 4
 	elif (ans == '2'):
 		Find()
 		exit()
+	else:
+		print ("INVALID SELECTION! Please enter a valid choice\n")
+		return StockInformation()
 	run = '1'
 	CurrentStock = Calc(run)
 	StockAbv = StockAbv.upper()
@@ -270,13 +326,77 @@ def StockInfo(): #Program option 4
 	
 	answer = input("Enter a number for a type of Stock Time Series: \n1.)Intraday \t\t 2.)Daily \n3.)Daily Adjusted \t 4.)Weekly \n5.)Weekly Adjusted \t 6.)Monthly \n7.)Monthly Adjusted \t 8.)Quote Endpoint\nSelection: ")
 	if(answer == '1'): #intraday
-		data, meta_data = ts.get_intraday(symbol=symbols, interval = '60min', outputsize = 'compact')
-		print(data)
+		inter = input("Select time interval: \n1.)1 Min \t2.)5 Mins \t3.)15 Mins \n4.)30 Mins \t5.)60 Mins \nSelection: ")
+		if(inter == '1'):
+			inter = '1min'
+		elif(inter == '2'):
+			inter = '5min'
+		elif(inter == '3'):
+			inter = '15min'
+		elif(inter == '4'):
+			inter = '30min'
+		elif(inter == '5'):
+			inter = '60min'
+		else:
+			print ("INVALID SELECTION! Please enter a valid choice\n")
+			return StockInformation()
+		
+		output = input("Output size: \n1.)Compact (Only returns 100 data points) \t2.)Full (Returns the full length intraday time series) \nSelection: ")
+		if(output == '1'):
+			output = 'compact'
+		elif(output == '2'):
+			output = 'Full'
+		else:
+			print ("INVALID SELECTION! Please enter a valid choice\n")
+			return StockInformation()
+				
+		typeof = input("What type of output style would you like? \n1.)Embedded into the program for quick analysis (full list of selection won't all show) \n2.)Export to a .csv file in the directory where you have this program file at \n3.)Email the .csv file to a desired email address\nSelection: ")
+		if(typeof == '1'):
+			ts = TimeSeries(key=api_key, output_format='pandas')
+		elif(typeof == '2' or typeof == '3'):
+			ts = TimeSeries(key=api_key, output_format='csv')
+		else:
+			print ("INVALID SELECTION! Please enter a valid choice\n")
+			return StockInformation()
+		data, meta_data = ts.get_intraday(symbol=symbols, interval = inter, outputsize = output)
+		if typeof == '1':
+			print(data)
+		elif typeof == '2':
+			StockInf_csvreader, meta = ts.get_intraday(symbol=symbols, interval = inter, outputsize = output)
+			with open('StockInfo.csv', 'w') as write_csvfile:
+				writer = csv.writer(write_csvfile, dialect='excel')
+				for row in StockInf_csvreader:
+					writer.writerow(row)
+			print("Outputed StockInfo.csv successfully...")
+		elif typeof == '3':
+			StockInf_csvreader, meta = ts.get_intraday(symbol=symbols, interval = inter, outputsize = output)
+			with open('StockInfo.csv', 'w') as write_csvfile:
+				writer = csv.writer(write_csvfile, dialect='excel')
+				for row in StockInf_csvreader:
+					writer.writerow(row)
+			Email("StockInfo.csv")
+		
 	elif (answer == '2'): #daily
-		data, meta_data = ts.get_daily(symbol=symbols, outputsize = 'compact')
+		output = input("Output size: \n1.)Compact (Only returns 100 data points) \t2.)Full (Returns the full length intraday time series) \nSelection: ")
+		if(output == '1'):
+			output = 'compact'
+		elif(output == '2'):
+			output = 'Full'
+		else:
+			print ("INVALID SELECTION! Please enter a valid choice\n")
+			return StockInformation()
+		data, meta_data = ts.get_daily(symbol=symbols, outputsize = output)
 		print(data)
 	elif (answer == '3'): #daily adj
-		data, meta_data = ts.get_daily_adjusted(symbol=symbols, outputsize = 'compact')
+		output = input("Output size: \n1.)Compact (Only returns 100 data points) \t2.)Full (Returns the full length intraday time series) \nSelection: ")
+		if(output == '1'):
+			output = 'compact'
+		elif(output == '2'):
+			output = 'Full'
+		else:
+			print ("INVALID SELECTION! Please enter a valid choice\n")
+			return StockInformation()
+		data, meta_data = ts.get_daily(symbol=symbols, outputsize = output)
 		print(data)
 	elif (answer == '4'): #weekly
 		data, meta_data = ts.get_weekly(symbol=symbols)
@@ -293,13 +413,15 @@ def StockInfo(): #Program option 4
 	elif (answer == '8'): #quote endpoint
 		data, meta_data = ts.get_quote_endpoint(symbol=symbols)
 		print(data)
+	else:
+		print ("INVALID SELECTION! Please enter a valid choice\n")
+		return StockInformation()
 		
 		
 def Find():	
-	api_key = 'N2KM217DEK4NJRPI'
 	ts = TimeSeries(key=api_key, output_format='csv')
 	key = input("Enter keywords to find desired stock\nSelection: ")
-	print("List of stocks that may match your keywords will be outputted to a .csv file in the directory you have this file at.")
+	print("List of stocks that may match your keywords will be outputted to a .csv file in the directory whereyou have this program file at.")
 	StockFinder_csvreader, meta = ts.get_symbol_search(keywords = key)
 	with open('Stock_Finder.csv', 'w') as write_csvfile:
 		writer = csv.writer(write_csvfile, dialect='excel')
@@ -315,8 +437,61 @@ def LiveStockInfo(): #Program option 5
 def Settings(): #Program option 6
 	Settings = open('Settings.txt', 'r')
 	print (Settings.read())
-	Settings.close()	
+	Settings.close()
+	
+def Email(File):
+	emailfrom = "PythonProgramJ"
+	emailto = "destination@example.com"
+	fileToSend = File
+	username = "PythonProgramJ@gmail.com"
+	password = "dekvacolgesymyat"	#App Password, This account was only made to send emails.
 
+	emailto = input("\nEnter destination email address: \n")
+	msg = MIMEMultipart()
+	msg["From"] = emailfrom
+	msg["To"] = emailto
+	msg["Subject"] = "Python .CSV File"
+	msg.preamble = "Attached is your .CSV"
+
+	ctype, encoding = mimetypes.guess_type(fileToSend)
+	if ctype is None or encoding is not None:
+		ctype = "application/octet-stream"
+
+	maintype, subtype = ctype.split("/", 1)
+	'''
+	if maintype == "text":
+		fp = open(fileToSend)
+		# Note: we should handle calculating the charset
+		attachment = MIMEText(fp.read(), _subtype=subtype)
+		fp.close()
+	elif maintype == "image":
+		fp = open(fileToSend, "rb")
+		attachment = MIMEImage(fp.read(), _subtype=subtype)
+		fp.close()
+	elif maintype == "audio":
+		fp = open(fileToSend, "rb")
+		attachment = MIMEAudio(fp.read(), _subtype=subtype)
+		fp.close()
+	else:
+	'''
+	fp = open(fileToSend, "rb")
+	attachment = MIMEBase(maintype, subtype)
+	attachment.set_payload(fp.read())
+	fp.close()
+	encoders.encode_base64(attachment)
+	
+	attachment.add_header("Content-Disposition", "attachment", filename=fileToSend)
+	msg.attach(attachment)
+
+	server = smtplib.SMTP("smtp.gmail.com:587")
+	server.starttls()
+	server.login(username,password)
+	server.sendmail(emailfrom, emailto, msg.as_string())
+	server.quit()
+	print ("\nEmail has been succesfully...")
+	print ("Destination address:", emailto)
+	print ("Origination Address:", username)
+	os.remove(fileToSend)
 
 art = open('AsciiArt.txt', 'r')
 print (art.read())
